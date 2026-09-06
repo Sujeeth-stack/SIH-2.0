@@ -12,7 +12,10 @@ const CFG = {
 };
 const DBNAME = process.env.PGDATABASE || 'sangam';
 
+// A hosted provider creates the database for us and usually forbids CREATE
+// DATABASE, so this step only applies to the local cluster.
 async function ensureDatabase() {
+  if (process.env.DATABASE_URL) return;
   const admin = new Client({ ...CFG, database: 'postgres' });
   await admin.connect();
   const { rowCount } = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [DBNAME]);
@@ -25,9 +28,7 @@ async function ensureDatabase() {
   await admin.end();
 }
 
-async function main() {
-  await ensureDatabase();
-  const pool = new Pool({ ...CFG, database: DBNAME });
+async function applyTo(pool) {
   const dir = path.join(__dirname, '..', 'db');
   const files = fs.readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
   for (const f of files) {
@@ -40,7 +41,26 @@ async function main() {
       WHERE table_schema='public' ORDER BY table_name`
   );
   console.log('tables:', t.rows.map((r) => r.table_name).join(', '));
+}
+
+/// Used by the server on boot so a deploy needs no separate migrate step.
+async function migrate() {
+  await ensureDatabase();
+  const db = require('./db');
+  await applyTo(db.pool);
+}
+
+async function main() {
+  await ensureDatabase();
+  const pool = process.env.DATABASE_URL
+    ? require('./db').pool
+    : new Pool({ ...CFG, database: DBNAME });
+  await applyTo(pool);
   await pool.end();
 }
 
-main().catch((e) => { console.error(e.message); process.exit(1); });
+module.exports = { migrate };
+
+if (require.main === module) {
+  main().catch((e) => { console.error(e.message); process.exit(1); });
+}

@@ -16,6 +16,7 @@ table — and every report it sends is written to Postgres.
 | `sangam_api/` | Node/Express API, the only thing that touches the database |
 | `sangam_api/db/001_init.sql` | The Postgres schema |
 | `scripts/` | Start / stop / run / tunnel helpers |
+| `DEPLOY.md` | Putting the API on a permanent public address |
 
 The database is a **portable Postgres 16.4** under `~/pgsql`, running on port
 **5433** as user `sangam`. It needed no root to install and it is not a system
@@ -69,8 +70,9 @@ the free URL changes every restart (which is exactly what the Settings field
 is for). The script forces `--protocol http2`, because QUIC is throttled on
 many networks and fails as `timeout: no recent network activity`.
 
-For something that outlives your laptop, deploy `sangam_api` and a managed
-Postgres to any host and point Settings at it once.
+For something that outlives your laptop, see **[DEPLOY.md](DEPLOY.md)** — a
+Render blueprint is included, so it is New → Blueprint → Apply, and the API
+migrates and seeds itself on first boot.
 
 ### Checks
 

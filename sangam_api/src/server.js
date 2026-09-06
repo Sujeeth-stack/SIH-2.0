@@ -265,12 +265,11 @@ async function detail(problemId) {
 // Direct multipart upload. The spec's presign/confirm pair assumes MinIO;
 // with no object store in Phase 1 the API writes the file to disk and records
 // the row, which keeps every byte accounted for in Postgres.
+// Held in memory, then written to Postgres. A hosted filesystem is rebuilt on
+// every deploy, so anything left on disk is lost; the database is the only
+// durable store Phase 1 has.
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => cb(null, MEDIA_DIR),
-    filename: (_req, file, cb) =>
-      cb(null, `${crypto.randomUUID()}${path.extname(file.originalname || '').slice(0, 10)}`),
-  }),
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_MEDIA_BYTES },
 });
 
@@ -280,17 +279,16 @@ app.post('/problems/:id/media', upload.single('file'), wrap(async (req, res) => 
   if (!req.file) return fail(res, 400, 'NO_FILE', 'Attach a file field named "file"');
 
   const owner = await db.query('SELECT device_id FROM problems WHERE problem_id = $1', [problemId]);
-  if (!owner.rows.length) {
-    fs.unlink(req.file.path, () => {});
-    return fail(res, 404, 'NOT_FOUND', 'No such report');
-  }
+  if (!owner.rows.length) return fail(res, 404, 'NOT_FOUND', 'No such report');
 
   const kind = MEDIA_KINDS.includes(req.body.kind) ? req.body.kind : 'photo';
   const mediaId = crypto.randomUUID();
   const { rows } = await db.query(
-    `INSERT INTO problem_media (media_id, problem_id, kind, storage_key, mime_type, byte_size)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING media_id, kind, mime_type, byte_size, created_at`,
-    [mediaId, problemId, kind, path.basename(req.file.path), req.file.mimetype, req.file.size]
+    `INSERT INTO problem_media
+       (media_id, problem_id, kind, mime_type, byte_size, content)
+     VALUES ($1,$2,$3,$4,$5,$6)
+     RETURNING media_id, kind, mime_type, byte_size, created_at`,
+    [mediaId, problemId, kind, req.file.mimetype, req.file.size, req.file.buffer]
   );
   await db.query('UPDATE problems SET updated_at = now() WHERE problem_id = $1', [problemId]);
   res.status(201).json({ media: { ...rows[0], url: `/media/${mediaId}` } });
@@ -299,13 +297,24 @@ app.post('/problems/:id/media', upload.single('file'), wrap(async (req, res) => 
 app.get('/media/:id', wrap(async (req, res) => {
   if (!isUuid(req.params.id)) return fail(res, 400, 'BAD_ID', 'media_id must be a UUID');
   const { rows } = await db.query(
-    'SELECT storage_key, mime_type FROM problem_media WHERE media_id = $1', [req.params.id]
+    `SELECT content, storage_key, mime_type FROM problem_media WHERE media_id = $1`,
+    [req.params.id]
   );
   if (!rows.length) return fail(res, 404, 'NOT_FOUND', 'No such media');
-  const file = path.join(MEDIA_DIR, path.basename(rows[0].storage_key));
-  if (!fs.existsSync(file)) return fail(res, 410, 'GONE', 'File is no longer on disk');
-  if (rows[0].mime_type) res.type(rows[0].mime_type);
-  res.sendFile(file);
+
+  const row = rows[0];
+  if (row.mime_type) res.type(row.mime_type);
+  // Evidence never changes once uploaded.
+  res.set('Cache-Control', 'public, max-age=31536000, immutable');
+
+  if (row.content) return res.send(row.content);
+
+  // Rows created before media moved into the database still point at a file.
+  if (row.storage_key) {
+    const file = path.join(MEDIA_DIR, path.basename(row.storage_key));
+    if (fs.existsSync(file)) return res.sendFile(file);
+  }
+  return fail(res, 410, 'GONE', 'That file is no longer stored');
 }));
 
 // --------------------------------------------------------- status updates
@@ -382,10 +391,25 @@ app.use((err, _req, res, _next) => {
 
 app.use((_req, res) => fail(res, 404, 'NO_ROUTE', 'Unknown endpoint'));
 
-if (require.main === module) {
+async function start() {
+  // Bring the schema up to date before serving. Hosted deploys have no shell
+  // step, and running this twice is harmless — every migration is idempotent.
+  if (process.env.SKIP_MIGRATE !== '1') {
+    try {
+      await require('./migrate').migrate();
+      if (process.env.SEED_DISTRICTS !== '0') {
+        await require('./seed_districts')();
+      }
+    } catch (e) {
+      console.error('migration failed:', e.message);
+      process.exit(1);
+    }
+  }
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`sangam-api listening on http://0.0.0.0:${PORT}`);
   });
 }
+
+if (require.main === module) start();
 
 module.exports = app;
