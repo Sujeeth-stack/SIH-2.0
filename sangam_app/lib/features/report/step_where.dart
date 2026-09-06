@@ -186,17 +186,18 @@ class _StepWhereState extends State<StepWhere> {
 
   Future<void> _addFile(String kind) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final picked = await FilePicker.pickFile(
         type: kind == 'audio' ? FileType.audio : FileType.any,
       );
-      final path = result?.files.single.path;
-      if (path == null) return;
+      // `path` is null when the pick is not a local file (a cloud provider,
+      // for instance); there is nothing to upload in that case.
+      final path = picked?.path;
+      if (picked == null || path == null) {
+        if (picked != null) _toast('Pick a file saved on this device.');
+        return;
+      }
       setState(() => widget.draft.attachments.add(
-            Attachment(
-              path: path,
-              kind: kind,
-              name: result!.files.single.name,
-            ),
+            Attachment(path: path, kind: kind, name: picked.name),
           ));
       widget.onChanged();
     } catch (_) {
