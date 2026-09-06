@@ -9,7 +9,11 @@ import 'home_page.dart';
 /// app has to be legible to someone using it for the first time.
 class HomeShell extends StatefulWidget {
   final SangamApi api;
-  const HomeShell({super.key, required this.api});
+
+  /// Called from Settings when the reporter points the app at a new server.
+  final ValueChanged<String>? onServerChanged;
+
+  const HomeShell({super.key, required this.api, this.onServerChanged});
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -46,6 +50,7 @@ class _HomeShellState extends State<HomeShell> {
             key: _homeKey,
             api: widget.api,
             onSeeAllReports: () => _select(1),
+            onServerChanged: widget.onServerChanged,
           ),
           MyReportsPage(key: _reportsKey, api: widget.api),
           DashboardPage(key: _dashboardKey, api: widget.api),

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sangam/core/app_config.dart';
 import 'package:sangam/core/device_identity.dart';
 import 'package:sangam/data/api.dart';
+import 'package:sangam/core/server_store.dart';
 import 'package:sangam/main.dart';
 
 /// Pulls main.dart into the compiled test tree so the real entrypoint and the
@@ -25,6 +26,28 @@ void main() {
     expect(AppConfig.baseUrl, startsWith('http'));
   });
 
+  group('server address', () {
+    test('a bare host is assumed to be https', () {
+      expect(ServerStore.normalise('sangam.example.in'),
+          'https://sangam.example.in');
+    });
+
+    test('trailing slashes are dropped so paths do not double up', () {
+      expect(ServerStore.normalise('https://a.example.in///'),
+          'https://a.example.in');
+    });
+
+    test('an explicit http:// address is left alone', () {
+      expect(ServerStore.normalise(' http://10.0.0.5:4000 '),
+          'http://10.0.0.5:4000');
+    });
+
+    test('nonsense is rejected with a sentence, not an exception', () {
+      expect(ServerStore.validate(''), isNotNull);
+      expect(ServerStore.validate('https://sangam.example.in'), isNull);
+    });
+  });
+
   testWidgets('the root widget builds and lands on the main page',
       (tester) async {
     final api = SangamApi(
@@ -32,7 +55,11 @@ void main() {
       adapter: _Offline(),
     );
 
-    await tester.pumpWidget(SangamApp(api: api));
+    await tester.pumpWidget(SangamApp(
+      deviceId: '33333333-3333-4333-8333-333333333333',
+      initialBaseUrl: 'http://127.0.0.1:4000',
+      apiOverride: api,
+    ));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }

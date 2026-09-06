@@ -15,7 +15,7 @@ table — and every report it sends is written to Postgres.
 | `sangam_app/` | The Flutter app (Android + Linux desktop targets) |
 | `sangam_api/` | Node/Express API, the only thing that touches the database |
 | `sangam_api/db/001_init.sql` | The Postgres schema |
-| `scripts/` | Start / stop / run helpers |
+| `scripts/` | Start / stop / run / tunnel helpers |
 
 The database is a **portable Postgres 16.4** under `~/pgsql`, running on port
 **5433** as user `sangam`. It needed no root to install and it is not a system
@@ -44,6 +44,33 @@ To point the app at a real server:
 ```bash
 flutter run --dart-define=API_BASE_URL=https://api.example.in
 ```
+
+That flag only sets the **default**. At runtime the address is editable in
+**Settings → Server**, so one installed APK can follow a backend that moves —
+a tunnel URL that changed, a laptop on a new network, or the real deployment
+later — without anyone rebuilding it. Whatever is set there is remembered and
+wins over the compiled-in value; **Reset** returns to it.
+
+### Letting phones off this Wi-Fi reach the API
+
+A LAN address like `10.122.93.141:4000` only means anything inside your own
+network, so a friend's phone elsewhere cannot use it. To publish the local API
+on a public HTTPS URL:
+
+```bash
+./scripts/tunnel-start.sh
+```
+
+It prints a `https://….trycloudflare.com` address — free, no account. Put that
+into the app under **Settings → Server → Test and save**.
+
+Two things to know: your laptop has to stay on with the tunnel running, and
+the free URL changes every restart (which is exactly what the Settings field
+is for). The script forces `--protocol http2`, because QUIC is throttled on
+many networks and fails as `timeout: no recent network activity`.
+
+For something that outlives your laptop, deploy `sangam_api` and a managed
+Postgres to any host and point Settings at it once.
 
 ### Checks
 
@@ -195,7 +222,7 @@ Dashboard — with labels always visible.
 
 ## Tests
 
-`flutter test` runs 22 tests:
+`flutter test` runs 26 tests:
 
 - **`widget_test.dart`** — status vocabulary and the report card, no network.
 - **`home_ui_test.dart`** — drives Home through a stubbed HTTP adapter:

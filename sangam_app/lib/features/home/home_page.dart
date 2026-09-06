@@ -17,11 +17,13 @@ import '../track/report_detail_page.dart';
 class HomePage extends StatefulWidget {
   final SangamApi api;
   final VoidCallback onSeeAllReports;
+  final ValueChanged<String>? onServerChanged;
 
   const HomePage({
     super.key,
     required this.api,
     required this.onSeeAllReports,
+    this.onServerChanged,
   });
 
   @override
@@ -90,7 +92,10 @@ class HomePageState extends State<HomePage> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => SettingsPage(api: widget.api),
+                  builder: (_) => SettingsPage(
+                  api: widget.api,
+                  onServerChanged: widget.onServerChanged,
+                ),
                 ),
               );
               refresh();

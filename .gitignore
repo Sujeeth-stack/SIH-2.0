@@ -36,3 +36,7 @@ claude-install.sh
 install.h
 install.sh
 test.sh
+
+# Built APKs — distributed as release assets, never committed. Binaries this
+# size would live in the history permanently.
+dist/

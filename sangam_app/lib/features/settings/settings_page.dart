@@ -4,13 +4,15 @@ import 'package:flutter/services.dart';
 import '../../core/theme.dart';
 import '../../data/api.dart';
 import '../../data/models.dart';
+import '../../core/server_store.dart';
 import '../../data/reporter_store.dart';
 import '../../widgets/labeled_field.dart';
 import '../../widgets/section_header.dart';
 
 class SettingsPage extends StatefulWidget {
   final SangamApi api;
-  const SettingsPage({super.key, required this.api});
+  final ValueChanged<String>? onServerChanged;
+  const SettingsPage({super.key, required this.api, this.onServerChanged});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -20,6 +22,59 @@ class _SettingsPageState extends State<SettingsPage> {
   ReporterProfile _profile = const ReporterProfile();
   bool _loading = true;
   bool _saving = false;
+
+  late final TextEditingController _serverCtrl =
+      TextEditingController(text: widget.api.baseUrl);
+  String? _serverError;
+  String? _serverStatus;
+  bool _testing = false;
+
+  @override
+  void dispose() {
+    _serverCtrl.dispose();
+    super.dispose();
+  }
+
+  /// Saves the address and asks the app to rebuild against it. The connection
+  /// is checked first so a typo is caught here rather than looking like every
+  /// screen is broken.
+  Future<void> _applyServer() async {
+    final raw = _serverCtrl.text;
+    final invalid = ServerStore.validate(raw);
+    if (invalid != null) {
+      setState(() {
+        _serverError = invalid;
+        _serverStatus = null;
+      });
+      return;
+    }
+
+    final url = ServerStore.normalise(raw);
+    setState(() {
+      _testing = true;
+      _serverError = null;
+      _serverStatus = null;
+    });
+
+    final probe = SangamApi(deviceId: widget.api.deviceId, baseUrl: url);
+    try {
+      await probe.analytics();
+      await ServerStore.save(url);
+      if (!mounted) return;
+      setState(() {
+        _testing = false;
+        _serverStatus = 'Connected. This phone now uses $url';
+        _serverCtrl.text = url;
+      });
+      widget.onServerChanged?.call(url);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _testing = false;
+        _serverError = 'Could not reach that server. ${e.message}';
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -62,6 +117,69 @@ class _SettingsPageState extends State<SettingsPage> {
           : ListView(
               padding: const EdgeInsets.all(Gap.lg),
               children: [
+                const SectionHeader('Server'),
+                Text(
+                  'Where this app sends reports. Change it if the team moves '
+                  'the server to a new address.',
+                  style: t.bodySmall,
+                ),
+                const SizedBox(height: Gap.md),
+                TextField(
+                  controller: _serverCtrl,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    hintText: 'https://sangam.example.in',
+                    errorText: _serverError,
+                  ),
+                ),
+                if (_serverStatus != null) ...[
+                  const SizedBox(height: Gap.sm),
+                  Text(
+                    _serverStatus!,
+                    style: t.bodySmall?.copyWith(color: AppColors.success),
+                  ),
+                ],
+                const SizedBox(height: Gap.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _testing ? null : _applyServer,
+                        child: _testing
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('Test and save'),
+                      ),
+                    ),
+                    const SizedBox(width: Gap.md),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _testing
+                            ? null
+                            : () async {
+                                await ServerStore.reset();
+                                if (!context.mounted) return;
+                                final fallback = await ServerStore.load();
+                                if (!context.mounted) return;
+                                setState(() {
+                                  _serverCtrl.text = fallback;
+                                  _serverError = null;
+                                  _serverStatus = 'Reset to the built-in address';
+                                });
+                                widget.onServerChanged?.call(fallback);
+                              },
+                        child: const Text('Reset'),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: Gap.xxl),
                 const SectionHeader('Your details'),
                 Text(
                   'Optional, and never checked by the app. It only helps an '
@@ -155,8 +273,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _Row(label: 'App', value: 'SANGAM · Phase 1'),
-                        const SizedBox(height: Gap.md),
-                        _Row(label: 'Server', value: widget.api.baseUrl),
                         const SizedBox(height: Gap.md),
                         Row(
                           children: [
