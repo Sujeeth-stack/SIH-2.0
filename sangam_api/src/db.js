@@ -11,15 +11,47 @@ const { Pool } = require('pg');
 // reused anywhere reachable.
 const url = process.env.DATABASE_URL;
 
-// Managed Postgres requires TLS. Certificates are publicly trusted at Neon,
-// Supabase and Render's external hosts, so verification stays on by default.
-// PGSSL_NO_VERIFY=1 is the escape hatch for a provider using a self-signed
-// certificate — it disables verification, so only set it when you must.
+// Whether to use TLS, which is not a simple yes/no.
+//
+// Public Postgres (Neon, Supabase, Render's *external* host) requires TLS.
+// But a provider's own private network usually does not terminate it at all:
+// Render's internal connection string is a bare hostname like "dpg-abc123-a",
+// and forcing TLS there fails with "The server does not support SSL
+// connections" — which is exactly how the first deploy broke.
+//
+// Order: explicit env override, then sslmode in the URL, then the hostname.
 function sslSetting() {
   if (!url) return false;                       // loopback, no TLS needed
   if (process.env.PGSSL === 'disable') return false;
+  if (process.env.PGSSL === 'require') return true;
   if (process.env.PGSSL_NO_VERIFY === '1') return { rejectUnauthorized: false };
-  return true;
+
+  let host = '';
+  let mode = null;
+  try {
+    const parsed = new URL(url);
+    host = parsed.hostname;
+    mode = parsed.searchParams.get('sslmode');
+  } catch {
+    return true;                                // unparseable: assume public
+  }
+
+  if (mode === 'disable') return false;
+  if (mode) return true;                        // require / verify-* / prefer
+
+  // Private networks do not terminate TLS. A bare name with no dot is one
+  // (Render internal, docker links), as are these suffixes, loopback, and the
+  // RFC 1918 ranges.
+  const privateSuffix = ['.internal', '.flycast', '.local', '.localdomain'];
+  if (!host.includes('.')) return false;
+  if (privateSuffix.some((suffix) => host.endsWith(suffix))) return false;
+  if (host === 'localhost' || host === '::1') return false;
+  if (/^127\./.test(host)) return false;
+  if (/^10\./.test(host)) return false;
+  if (/^192\.168\./.test(host)) return false;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+
+  return true;                                  // public host: verify certs
 }
 
 const pool = new Pool(

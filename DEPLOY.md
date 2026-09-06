@@ -70,8 +70,25 @@ DATABASE_URL=postgres://user:pass@host:5432/dbname?sslmode=require
 ```
 
 Optional: `PORT` (default 4000), `DAILY_SUBMIT_LIMIT` (default 20),
-`SKIP_MIGRATE=1` to disable migrate-on-boot, `PGSSL_NO_VERIFY=1` only if your
-provider uses a self-signed certificate.
+`SKIP_MIGRATE=1` to disable migrate-on-boot.
+
+### TLS is worked out automatically
+
+Public Postgres requires TLS; a provider's private network usually does not
+terminate it at all. The API decides from the URL: `sslmode` if present,
+otherwise the hostname — a bare name with no dot (Render's internal
+`dpg-abc123-a`), a `.internal`/`.flycast` suffix, loopback or an RFC 1918
+address means no TLS; anything else is treated as public and its certificate
+is verified.
+
+Override if a provider is unusual:
+
+- `PGSSL=require` — force TLS
+- `PGSSL=disable` — force plaintext
+- `PGSSL_NO_VERIFY=1` — TLS without certificate verification (self-signed only)
+
+If a deploy fails with **"The server does not support SSL connections"**, the
+API is using TLS against a private network: set `PGSSL=disable`.
 
 A `Dockerfile` is included for hosts without a Node buildpack (Fly.io, Koyeb,
 Cloud Run).
