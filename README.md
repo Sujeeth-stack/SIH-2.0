@@ -78,6 +78,34 @@ Postgres to any host and point Settings at it once.
 ./scripts/test-all.sh     # flutter analyze + flutter test
 ```
 
+### Looking inside the database
+
+The portable Postgres bundle ships no `psql`, so use:
+
+```bash
+./scripts/db-show.sh                      # counts, status breakdown, recent reports
+./scripts/db-show.sh problems             # every report
+./scripts/db-show.sh devices              # who has reported, and how much
+./scripts/db-show.sh media                # uploaded evidence
+./scripts/db-show.sh history JH-DMK-000417
+./scripts/db-show.sh sql "SELECT domain, count(*) FROM problems GROUP BY 1"
+```
+
+`sql` refuses anything that is not a SELECT — schema changes belong in a
+migration under `sangam_api/db/`.
+
+To point a GUI (DBeaver, pgAdmin, TablePlus) at it:
+
+| | |
+|---|---|
+| Host | `127.0.0.1` |
+| Port | **5433** (not 5432) |
+| Database | `sangam` |
+| User | `sangam` |
+| Password | `sangam_dev_pw` |
+
+The server only listens on loopback, so a GUI has to run on this machine.
+
 ### Demo data
 
 ```bash
