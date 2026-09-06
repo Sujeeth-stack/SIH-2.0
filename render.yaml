@@ -1,5 +1,9 @@
 # One-click deploy for the SANGAM Phase 1 API.
 #
+# This file must sit at the REPOSITORY ROOT — Render only looks for
+# render.yaml here, never inside a subdirectory. The API itself lives in
+# sangam_api/, which is what rootDir below points at.
+#
 # In Render: New -> Blueprint -> point it at this repo. It creates the web
 # service and a Postgres instance, wires DATABASE_URL between them, and the
 # API migrates and seeds itself on first boot.

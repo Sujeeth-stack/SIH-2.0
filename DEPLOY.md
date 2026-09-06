@@ -14,6 +14,23 @@ You only need to do this once. Afterwards you put the address into the app under
 2. Sign up at https://render.com with your GitHub account.
 3. **New → Blueprint**, pick the `SIH-2.0` repo, **Apply**.
 
+`render.yaml` has to be at the repository root — Render never looks inside
+subdirectories for it.
+
+### If the repo does not appear in the list
+
+Render lists repos only for the GitHub account it is connected to. If you
+signed into Render with a different GitHub account than the one that owns
+`SIH-2.0`, it will not be there. Two ways out:
+
+- **Deploy by URL.** The Blueprint page has a *Public Git repository* field.
+  Paste `https://github.com/Sujeeth-stack/SIH-2.0` — the repo is public, so no
+  account connection is needed at all.
+- **Grant access.** Log into GitHub as the account that owns the repo, then
+  install the Render GitHub App on it
+  (https://github.com/apps/render → Configure → pick the account → allow
+  `SIH-2.0`). Reload Render and it appears.
+
 `render.yaml` does the rest: it creates the web service and a Postgres
 instance, sets `DATABASE_URL` on the service, and the API migrates and seeds
 the 24 districts on first boot. No shell step.

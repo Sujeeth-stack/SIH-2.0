@@ -17,6 +17,7 @@ table — and every report it sends is written to Postgres.
 | `sangam_api/db/001_init.sql` | The Postgres schema |
 | `scripts/` | Start / stop / run / tunnel helpers |
 | `DEPLOY.md` | Putting the API on a permanent public address |
+| `render.yaml` | Render Blueprint — must stay at the repo root |
 
 The database is a **portable Postgres 16.4** under `~/pgsql`, running on port
 **5433** as user `sangam`. It needed no root to install and it is not a system
