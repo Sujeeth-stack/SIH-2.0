@@ -1,0 +1,45 @@
+name: sangam
+description: "SANGAM — citizen problem reporting for Jharkhand. Phase 1: report, upload, track."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Networking
+  dio: ^5.7.0
+
+  # Device identity + saved reporter details
+  uuid: ^4.5.1
+  shared_preferences: ^2.3.3
+
+  # Evidence capture
+  image_picker: ^1.1.2
+  file_picker: ^8.1.4
+
+  # Location for the "Where" step
+  geolocator: ^13.0.2
+
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Bundled so the app never depends on a network fetch for its type, and so
+  # Devanagari always has a real face behind it.
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter.ttf
+    - family: NotoSansDevanagari
+      fonts:
+        - asset: assets/fonts/NotoSansDevanagari.ttf

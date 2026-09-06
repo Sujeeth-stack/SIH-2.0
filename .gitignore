@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------- Flutter
+sangam_app/build/
+sangam_app/.dart_tool/
+sangam_app/.flutter-plugins
+sangam_app/.flutter-plugins-dependencies
+sangam_app/.idea/
+sangam_app/*.iml
+sangam_app/android/.gradle/
+sangam_app/android/build/
+sangam_app/android/app/build/
+sangam_app/android/local.properties
+sangam_app/android/app/debug/
+sangam_app/android/app/profile/
+sangam_app/android/app/release/
+sangam_app/linux/flutter/ephemeral/
+**/generated_plugin_registrant.*
+
+# Golden failure artefacts (the committed goldens under test/screens/ stay)
+**/failures/
+
+# ------------------------------------------------------------------- Node
+sangam_api/node_modules/
+
+# Uploaded evidence is user data, not source. Keep the folder, drop contents.
+sangam_api/media/*
+!sangam_api/media/.gitkeep
+
+# ------------------------------------------------------------ Local/dev only
+*.log
+.env
+.env.local
+pgdata/
+
+# Unrelated leftovers that were in this folder before the project
+claude-install.sh
+install.h
+install.sh
+test.sh

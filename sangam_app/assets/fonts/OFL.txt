@@ -1,0 +1,12 @@
+The bundled typefaces are used under the SIL Open Font License 1.1.
+
+  Inter                  — Copyright (c) The Inter Project Authors
+                           https://github.com/rsms/inter
+  Noto Sans Devanagari   — Copyright (c) The Noto Project Authors
+                           https://github.com/notofonts/devanagari
+
+Full licence text: https://openfontlicense.org/open-font-license-official-text/
+
+Under the OFL these fonts may be bundled and redistributed with this
+application, including for commercial use, provided they are not sold on
+their own and this notice is retained.
