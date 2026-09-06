@@ -25,6 +25,10 @@ service — start it with the script below.
 
 ---
 
+The deployed API lives at **https://sangam-api-uz80.onrender.com**, which is
+the default compiled into the app. Nothing below is needed just to use it —
+only to develop against a local stack.
+
 ## Running it
 
 ```bash

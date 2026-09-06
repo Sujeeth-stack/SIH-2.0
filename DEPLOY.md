@@ -1,5 +1,10 @@
 # Deploying the SANGAM API
 
+> **Live:** https://sangam-api-uz80.onrender.com — this is the address the
+> app ships with. Verified end to end: 24 districts seeded, a report submitted
+> with its district resolved from GPS, and a photo round-tripped through
+> Postgres byte-identically.
+
 Goal: a permanent `https://…` address that works whether or not your laptop is
 on, so the app stops depending on a tunnel URL that changes every restart.
 
