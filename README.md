@@ -87,21 +87,35 @@ migrates and seeds itself on first boot.
 
 ### Looking inside the database
 
-The portable Postgres bundle ships no `psql`, so use:
+There are two databases: the live one on Render that the app writes to, and
+the portable cluster on this laptop used for development. Reading the wrong
+one is the easiest way to think data has gone missing, so `db-show.sh` always
+prints which it used.
+
+Point it at the live database once:
+
+1. Render dashboard → `sangam-db` → Connections → **External Database URL**
+   (the *external* one — the internal hostname only resolves inside Render).
+2. `cp sangam_api/.env.example sangam_api/.env` and paste it into
+   `RENDER_DATABASE_URL`. That file is gitignored.
+
+After that the live database is the default:
 
 ```bash
-./scripts/db-show.sh                      # counts, status breakdown, recent reports
+./scripts/db-show.sh                      # counts, statuses, recent reports
 ./scripts/db-show.sh problems             # every report
 ./scripts/db-show.sh devices              # who has reported, and how much
 ./scripts/db-show.sh media                # uploaded evidence
 ./scripts/db-show.sh history JH-DMK-000417
 ./scripts/db-show.sh sql "SELECT domain, count(*) FROM problems GROUP BY 1"
+
+./scripts/db-show.sh --local summary      # the laptop's cluster instead
 ```
 
 `sql` refuses anything that is not a SELECT — schema changes belong in a
 migration under `sangam_api/db/`.
 
-To point a GUI (DBeaver, pgAdmin, TablePlus) at it:
+To point a GUI (DBeaver, pgAdmin, TablePlus) at the local cluster:
 
 | | |
 |---|---|
@@ -111,7 +125,8 @@ To point a GUI (DBeaver, pgAdmin, TablePlus) at it:
 | User | `sangam` |
 | Password | `sangam_dev_pw` |
 
-The server only listens on loopback, so a GUI has to run on this machine.
+It only listens on loopback, so the GUI has to run on this machine. For the
+live database, use the same External Database URL.
 
 ### Demo data
 
